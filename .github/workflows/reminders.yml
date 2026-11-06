@@ -1,0 +1,40 @@
+name: Mi Salud Diario - Recordatorios
+on:
+  schedule:
+    - cron: '30 2 * * *'
+      timezone: 'America/New_York'
+    - cron: '0 6 * * *'
+      timezone: 'America/New_York'
+    - cron: '30 9 * * *'
+      timezone: 'America/New_York'
+    - cron: '30 12 * * *'
+      timezone: 'America/New_York'
+    - cron: '30 15 * * *'
+      timezone: 'America/New_York'
+    - cron: '30 18 * * *'
+      timezone: 'America/New_York'
+    - cron: '0 19 * * *'
+      timezone: 'America/New_York'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar librería de envío
+        run: npm install --no-save --no-audit --no-fund web-push@3.6.7
+      - name: Enviar avisos
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_CONTACT: ${{ secrets.VAPID_CONTACT }}
+          SLOT: ${{ github.event.schedule }}
+          TEST_PUSH: ${{ github.event_name == 'workflow_dispatch' }}
+        run: node scripts/send-reminders.cjs
