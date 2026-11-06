@@ -1,0 +1,2 @@
+// CLAVE PUBLICA VAPID. No contiene secretos.
+window.MSD_VAPID_PUBLIC_KEY = "BGzEGCYDSN5YdfFTjCr6L6-Dqh3-iTrHYXcfLBaMa2jsb-k_xOjXEVXhXWtNeUBw3Zc92iJmvbShpDFDNLIv4SI";
