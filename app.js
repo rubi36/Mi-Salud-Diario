@@ -5,7 +5,7 @@ const uid=()=> (globalThis.crypto&&crypto.randomUUID?crypto.randomUUID():String(
 const getStore=()=>{try{const r=JSON.parse(localStorage.getItem(K)||'{}');return r&&typeof r==='object'&&!Array.isArray(r)?r:{}}catch{return {}}};
 let records=getStore(), client=null, activeUser=null, pendingSync=false, syncing=false;
 const showToast=m=>{const n=$('toast');n.textContent=m;n.classList.add('visible');setTimeout(()=>n.classList.remove('visible'),3000)};
-const store=()=>localStorage.setItem(K,JSON.stringify(records));
+const store=()=>{localStorage.setItem(K,JSON.stringify(records));window.dispatchEvent(new Event('msd-records-changed'))};
 const save=(key,data)=>{records[key]={data,updated_at:new Date().toISOString(),deleted:false};store();renderAll();scheduleSync()};
 const remove=key=>{const d=records[key]?.data||{};records[key]={data:d,updated_at:new Date().toISOString(),deleted:true};store();renderAll();scheduleSync()};
 const live=(type)=>Object.entries(records).filter(([k,v])=>k.startsWith(type+':')&&!v.deleted).map(([key,value])=>({key,...value.data}));
@@ -17,7 +17,7 @@ const selectedDate=()=>{const d=new Date();d.setDate(d.getDate()+Number(daySelec
 const daySelect=$('daySelect');WEEK.forEach((v,i)=>daySelect.add(new Option(v.day,String(i))));daySelect.value=String(weekday());daySelect.addEventListener('change',renderMenu);
 const html=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function renderMenu(){const n=Number(daySelect.value),meals=WEEK[n].meals, date=selectedDate();const dayrecords=meals.map((m,i)=>!!records[`meal:${date}:${i}`]&&!records[`meal:${date}:${i}`].deleted&&records[`meal:${date}:${i}`].data.checked);const count=dayrecords.filter(Boolean).length; $('doneToday').textContent=`${count} / 5`;$('progressFill').style.width=`${count/5*100}%`;
-$('mealList').innerHTML=meals.map((m,i)=>`<article class="meal ${dayrecords[i]?'done':''}"><img loading="lazy" src="assets/${m[2]}.webp" alt="Fotografía ilustrativa de ${html(m[1].toLowerCase())}"><main><div class="meta">${html(m[0])} · ${html(WEEK[n].day.toUpperCase())}</div><h3>${html(m[1])}</h3><ul>${m[3].map(a=>`<li><span>${html(a[0])}</span><b>${html(a[1])}</b></li>`).join('')}</ul><label class="checkline"><input type="checkbox" data-meal="${i}" ${dayrecords[i]?'checked':''}> Comida realizada</label></main></article>`).join('');
+$('mealList').innerHTML=meals.map((m,i)=>`<article class="meal ${dayrecords[i]?'done':''}"><img loading="lazy" data-recipe="${i}" role="button" tabindex="0" src="assets/${m[2]}.webp" alt="Fotografía ilustrativa de ${html(m[1].toLowerCase())}"><main><div class="meta">${html(m[0])} · ${html(WEEK[n].day.toUpperCase())}</div><h3 data-recipe="${i}" role="button" tabindex="0">${html(m[1])}</h3><ul>${m[3].map(a=>`<li><span>${html(a[0])}</span><b>${html(a[1])}</b></li>`).join('')}</ul><button type="button" class="recipe-btn" data-recipe="${i}">📖 Ver receta y preparación</button><label class="checkline"><input type="checkbox" data-meal="${i}" ${dayrecords[i]?'checked':''}> Comida realizada</label></main></article>`).join('');
 document.querySelectorAll('[data-meal]').forEach(x=>x.addEventListener('change',()=>{save(`meal:${date}:${x.dataset.meal}`,{checked:x.checked,dayIndex:n,meal:x.dataset.meal,actualDate:date});showToast(x.checked?'Comida marcada ✓':'Marca retirada')}));
 }
 function renderHealth(){const items=live('bp').sort((a,b)=>(b.date+b.key).localeCompare(a.date+a.key));$('bpHistory').innerHTML=items.length?items.map(r=>`<div class="record"><div><b>${html(r.sys)}/${html(r.dia)} mmHg · ${html(r.pulse)} lpm</b><br><small>${html(r.date)} · ${html(r.period)}${r.note?' · '+html(r.note):''}</small></div><button class="del" data-del="${html(r.key)}" aria-label="Eliminar medición">Eliminar</button></div>`).join(''):'<p>No hay mediciones todavía.</p>';let latest=items[0];$('bpPreview').textContent=latest?`${latest.sys}/${latest.dia}`:'Sin registrar';
@@ -54,5 +54,5 @@ for(const r of remote){const local=records[r.entry_key];if(!local||new Date(loca
 store();renderAll();status('✓ Sincronizado con tu cuenta privada · '+new Date().toLocaleTimeString('es-US',{hour:'2-digit',minute:'2-digit'}));}catch(e){status('Sincronización pendiente: '+e.message+'. Tus datos siguen guardados localmente.')}finally{syncing=false;if(pendingSync){pendingSync=false;scheduleSync()}}}
 window.addEventListener('online',scheduleSync);document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleSync()});
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
-window.MSD={getClient:()=>client,getUser:()=>activeUser};renderAll();initClient();
+window.MSD={getClient:()=>client,getUser:()=>activeUser,getRecords:()=>records,saveRecord:save};renderAll();initClient();
 })();
